@@ -1,4 +1,4 @@
-# Codex Conversation Manager DSH
+# Codex Conversation Manager
 
 **Windows 上的 Codex 对话与项目管理、备份和迁移工具。**
 

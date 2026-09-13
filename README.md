@@ -1,4 +1,4 @@
-# Codex Conversation Manager DSH
+# Codex Conversation Manager
 
 **Manage, preview, back up, migrate, and batch-clean local Codex conversations and projects on Windows.**
 
