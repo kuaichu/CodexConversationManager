@@ -87,6 +87,9 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot 'VERSION') -Destination (Join-Path $stage 'VERSION')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'README.md') -Destination (Join-Path $stage 'README.md')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination (Join-Path $stage 'LICENSE')
+    $stageImages = Join-Path $stage 'docs\images'
+    New-Item -ItemType Directory -Path $stageImages -Force | Out-Null
+    Copy-Item -Path (Join-Path $repoRoot 'docs\images\*.png') -Destination $stageImages
 
     New-Item -ItemType Directory -Path $candidateRoot -Force | Out-Null
     New-DeterministicZip -SourceRoot $stage -DestinationPath $candidateZip

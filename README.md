@@ -10,6 +10,28 @@
 
 > 本项目是非官方社区工具，与 OpenAI 无关联，也未获得 OpenAI 背书。Codex 本地数据格式可能变化；处理重要数据前请保留独立备份。
 
+## 界面展示
+
+### 对话与项目管理
+
+![对话与项目管理主界面](docs/images/main-dark.png)
+
+### 项目与对话整体备份
+
+![项目与对话整体备份](docs/images/project-backup.png)
+
+### 子代理批量选择
+
+![子代理批量选择](docs/images/subagent-selection.png)
+
+### 对话内容预览
+
+![对话内容预览](docs/images/conversation-preview.png)
+
+### 导入与恢复进度
+
+![导入与恢复进度](docs/images/import-progress.png)
+
 ## 它解决什么问题
 
 - **项目换了路径，对话不见了：** 将已有对话重新关联到改名、移动或复制后的项目目录。

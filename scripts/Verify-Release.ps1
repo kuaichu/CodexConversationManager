@@ -110,6 +110,11 @@ if (-not [string]::IsNullOrWhiteSpace($PackagePath)) {
             'Start.cmd',
             'VERSION',
             'README.md',
+            'docs\images\conversation-preview.png',
+            'docs\images\import-progress.png',
+            'docs\images\main-dark.png',
+            'docs\images\project-backup.png',
+            'docs\images\subagent-selection.png',
             'LICENSE'
         )
         foreach ($relativePath in $requiredFiles) {
