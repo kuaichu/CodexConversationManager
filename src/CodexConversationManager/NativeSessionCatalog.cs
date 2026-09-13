@@ -167,6 +167,7 @@ internal static class NativeSessionCatalog
 			Title = indexed == null ? string.Empty : indexed.Title,
 			Preview = string.Empty,
 			Source = indexed == null ? string.Empty : indexed.Source,
+			Model = indexed == null ? string.Empty : indexed.Model,
 			CreatedAt = created == DateTime.MinValue ? string.Empty :
 				created.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
 			UpdatedAt = updated == DateTime.MinValue ? string.Empty :

@@ -71,6 +71,8 @@ internal sealed class MainWindowController
 
 	private readonly System.Windows.Controls.RadioButton conversationBackupModeRadio;
 
+	private readonly System.Windows.Controls.RadioButton cleanupModeRadio;
+
 	private readonly TextBlock backupModeHelpText;
 
 	private readonly FrameworkElement projectSelectionTools;
@@ -86,6 +88,8 @@ internal sealed class MainWindowController
 	private readonly TextBlock selectionHelpText;
 
 	private readonly System.Windows.Controls.ListBox projectList;
+
+	private readonly System.Windows.Controls.ComboBox projectScopeCombo;
 
 	private readonly System.Windows.Controls.ListBox sessionList;
 
@@ -126,6 +130,8 @@ internal sealed class MainWindowController
 	private readonly Border importTabIndicator;
 
 	private readonly System.Windows.Controls.Button languageButton;
+
+	private readonly System.Windows.Controls.Button themeToggleButton;
 	private readonly System.Windows.Controls.Button closeButton;
 
 
@@ -152,6 +158,8 @@ internal sealed class MainWindowController
 	private readonly System.Windows.Controls.Button backupSelectedButton;
 
 	private readonly System.Windows.Controls.Button backupProjectFilesButton;
+
+	private readonly System.Windows.Controls.Button cleanupSelectedButton;
 
 	private readonly System.Windows.Controls.Button inspectButton;
 
@@ -242,6 +250,8 @@ internal sealed class MainWindowController
 
 	private ICollectionView sessionView;
 
+	private ICollectionView projectView;
+
 	private PackManifest loadedManifest;
 
 	private bool loadedIsRawBundle;
@@ -254,6 +264,8 @@ internal sealed class MainWindowController
 
 
 	private bool projectBackupMode;
+
+	private bool cleanupMode;
 
 	private bool showSubagentSessions;
 
@@ -305,6 +317,7 @@ internal sealed class MainWindowController
 		backupFolderBox = Find<System.Windows.Controls.TextBox>("BackupFolderBox");
 		projectBackupModeRadio = Find<System.Windows.Controls.RadioButton>("ProjectBackupModeRadio");
 		conversationBackupModeRadio = Find<System.Windows.Controls.RadioButton>("ConversationBackupModeRadio");
+		cleanupModeRadio = Find<System.Windows.Controls.RadioButton>("CleanupModeRadio");
 		backupModeHelpText = Find<TextBlock>("BackupModeHelpText");
 		projectSelectionTools = Find<FrameworkElement>("ProjectSelectionTools");
 		sessionSelectionTools = Find<FrameworkElement>("SessionSelectionTools");
@@ -313,6 +326,7 @@ internal sealed class MainWindowController
 		sessionModeHint = Find<TextBlock>("SessionModeHint");
 		selectionHelpText = Find<TextBlock>("SelectionHelpText");
 		projectList = Find<System.Windows.Controls.ListBox>("ProjectList");
+		projectScopeCombo = Find<System.Windows.Controls.ComboBox>("ProjectScopeCombo");
 		sessionList = Find<System.Windows.Controls.ListBox>("SessionList");
 		searchBox = Find<System.Windows.Controls.TextBox>("SearchBox");
 		mainSessionsTabRadio = Find<System.Windows.Controls.RadioButton>("MainSessionsTabRadio");
@@ -339,6 +353,7 @@ internal sealed class MainWindowController
 		browseBackupFolderButton = Find<System.Windows.Controls.Button>("BrowseBackupFolderButton");
 		selectAllProjectsButton = Find<System.Windows.Controls.Button>("SelectAllProjectsButton");
 		languageButton = Find<System.Windows.Controls.Button>("LanguageButton");
+		themeToggleButton = Find<System.Windows.Controls.Button>("ThemeToggleButton");
 		closeButton = Find<System.Windows.Controls.Button>("CloseButton");
 		clearProjectsButton = Find<System.Windows.Controls.Button>("ClearProjectsButton");
 		toggleSessionSelectionButton = Find<System.Windows.Controls.Button>("ToggleSessionSelectionButton");
@@ -346,6 +361,7 @@ internal sealed class MainWindowController
 		copyProjectPathButton = Find<System.Windows.Controls.Button>("CopyProjectPathButton");
 		backupSelectedButton = Find<System.Windows.Controls.Button>("BackupSelectedButton");
 		backupProjectFilesButton = Find<System.Windows.Controls.Button>("BackupProjectFilesButton");
+		cleanupSelectedButton = Find<System.Windows.Controls.Button>("CleanupSelectedButton");
 		inspectButton = Find<System.Windows.Controls.Button>("InspectButton");
 		importButton = Find<System.Windows.Controls.Button>("ImportButton");
 		packagePathBox = Find<System.Windows.Controls.TextBox>("PackagePathBox");
@@ -390,6 +406,7 @@ internal sealed class MainWindowController
 		backupFolderBox.Text = DefaultBackupFolder();
 		languageButton.Content = UiLanguage.IsEnglish ? "中文" : "EN";
 		languageButton.ToolTip = UiLanguage.IsEnglish ? "Switch to Chinese" : "切换到英文";
+		UiTheme.Apply(window, UiTheme.Current);
 		WireEvents();
 		ShowBackupPage();
 	}
@@ -966,6 +983,13 @@ internal sealed class MainWindowController
 		{
 			SwitchLanguage();
 		};
+		if (themeToggleButton != null)
+		{
+			themeToggleButton.Click += delegate
+			{
+				UiTheme.Toggle(window);
+			};
+		}
 		browseBackupFolderButton.Click += delegate
 		{
 			BrowseBackupFolder();
@@ -975,6 +999,10 @@ internal sealed class MainWindowController
 			UpdateBackupMode();
 		};
 		conversationBackupModeRadio.Checked += delegate
+		{
+			UpdateBackupMode();
+		};
+		cleanupModeRadio.Checked += delegate
 		{
 			UpdateBackupMode();
 		};
@@ -988,6 +1016,7 @@ internal sealed class MainWindowController
 		};
 		projectList.SelectionChanged += ProjectListSelectionChanged;
 		projectList.PreviewMouseLeftButtonDown += ProjectListPreviewMouseLeftButtonDown;
+		projectScopeCombo.SelectionChanged += delegate { projectView?.Refresh(); UpdateSelectedCount(); };
 		sessionList.AddHandler(System.Windows.Controls.Primitives.ButtonBase.ClickEvent, new RoutedEventHandler(SessionActionButtonClick), handledEventsToo: true);
 		searchBox.TextChanged += delegate
 		{
@@ -1022,6 +1051,17 @@ internal sealed class MainWindowController
 		backupProjectFilesButton.Click += async delegate
 		{
 			await BackupProjectWithFilesAsync();
+		};
+		cleanupSelectedButton.Click += async delegate
+		{
+			if (cleanupMode)
+			{
+				await CleanupSelectedProjectsAsync();
+			}
+			else
+			{
+				await CleanupSelectedConversationsAsync();
+			}
 		};
 		browsePackageButton.Click += async delegate
 		{
@@ -1132,6 +1172,9 @@ internal sealed class MainWindowController
 			IntPtr handle = new WindowInteropHelper(window).Handle;
 			int value = 2;
 			DwmSetWindowAttribute(handle, 33, ref value, 4);
+			int darkMode = UiTheme.IsDark ? 1 : 0;
+			DwmSetWindowAttribute(handle, 20, ref darkMode, 4);
+			DwmSetWindowAttribute(handle, 19, ref darkMode, 4);
 		}
 		catch
 		{
@@ -1287,6 +1330,7 @@ internal sealed class MainWindowController
 			}
 			List<DbThread> orphanedThreads = new List<DbThread>();
 			List<DbThread> deletedSidebarRemnants = new List<DbThread>();
+			List<DbThread> desktopOnlyGhosts = new List<DbThread>();
 			string orphanDetectionError = string.Empty;
 			try
 			{
@@ -1305,6 +1349,15 @@ internal sealed class MainWindowController
 			{
 				orphanDetectionError = string.IsNullOrWhiteSpace(orphanDetectionError) ? detectionError.Message : orphanDetectionError + "；" + detectionError.Message;
 				AppendLog("检测旧版删除的侧边栏残留失败：" + detectionError.Message);
+			}
+			try
+			{
+				desktopOnlyGhosts = await Task.Run(() => ConversationIndexMaintenance.FindDesktopOnlyGhostThreads(codexHome));
+			}
+			catch (Exception detectionError)
+			{
+				orphanDetectionError = string.IsNullOrWhiteSpace(orphanDetectionError) ? detectionError.Message : orphanDetectionError + "；" + detectionError.Message;
+				AppendLog("检测新版桌面目录幽灵会话失败：" + detectionError.Message);
 			}
 			OrphanedSnapshotCleanupResult orphanedSnapshots = new OrphanedSnapshotCleanupResult();
 			if (Environment.GetEnvironmentVariable("CODEX_MIGRATOR_SKIP_SNAPSHOT_MAINTENANCE") != "1" &&
@@ -1330,7 +1383,9 @@ internal sealed class MainWindowController
 					session.PropertyChanged += SessionPropertyChanged;
 				}
 			}
-			projectList.ItemsSource = projects;
+			projectView = CollectionViewSource.GetDefaultView(projects);
+			projectView.Filter = ProjectFilter;
+			projectList.ItemsSource = projectView;
 			if (projects.Count > 0)
 			{
 				projectList.SelectedIndex = 0;
@@ -1354,7 +1409,7 @@ internal sealed class MainWindowController
 			}
 			string orphanSummary = string.Empty;
 			bool orphanError = !string.IsNullOrWhiteSpace(orphanDetectionError) || !string.IsNullOrWhiteSpace(desktopCacheCleanupError);
-			int staleSidebarCount = orphanedThreads.Count + deletedSidebarRemnants.Count;
+			int staleSidebarCount = orphanedThreads.Count + deletedSidebarRemnants.Count + desktopOnlyGhosts.Count;
 			if (staleSidebarCount > 0)
 			{
 				if (CodexDesktopProjectRegistry.IsDesktopRunning(codexHome))
@@ -1368,17 +1423,19 @@ internal sealed class MainWindowController
 					HashSet<string> blockedRootIds = new HashSet<string>(liveDescendants.Select((LiveDescendantInfo item) => item.RootThreadId), StringComparer.OrdinalIgnoreCase);
 					List<DbThread> repairableOrphans = orphanedThreads.Where((DbThread thread) => !blockedRootIds.Contains(thread.Id)).ToList();
 					List<DbThread> repairableLegacyRemnants = deletedSidebarRemnants.Where((DbThread thread) => !blockedRootIds.Contains(thread.Id)).ToList();
-					int repairableCount = repairableOrphans.Count + repairableLegacyRemnants.Count;
+					List<DbThread> repairableDesktopGhosts = desktopOnlyGhosts.Where((DbThread thread) => !blockedRootIds.Contains(thread.Id)).ToList();
+					int repairableCount = repairableOrphans.Count + repairableLegacyRemnants.Count + repairableDesktopGhosts.Count;
 					IEnumerable<string> currentPreview = orphanedThreads.Select((DbThread thread) => (UiLanguage.IsEnglish ? "• [Current index] " : "• [当前索引] ") + (string.IsNullOrWhiteSpace(thread.Title) ? thread.Id : thread.Title + " · " + thread.Id));
 					IEnumerable<string> legacyPreview = deletedSidebarRemnants.Select((DbThread thread) => (UiLanguage.IsEnglish ? "• [Legacy deletion] " : "• [旧版删除] ") + (string.IsNullOrWhiteSpace(thread.Title) ? thread.Id : thread.Title + " · " + thread.Id));
-					string itemPreview = string.Join("\n", currentPreview.Concat(legacyPreview).Take(8));
+					IEnumerable<string> ghostPreview = desktopOnlyGhosts.Select((DbThread thread) => (UiLanguage.IsEnglish ? "• [Desktop-only ghost] " : "• [仅桌面幽灵] ") + (string.IsNullOrWhiteSpace(thread.Title) ? thread.Id : thread.Title + " · " + thread.Id));
+					string itemPreview = string.Join("\n", currentPreview.Concat(legacyPreview).Concat(ghostPreview).Take(8));
 					if (staleSidebarCount > 8)
 					{
 						itemPreview += UiLanguage.IsEnglish ? $"\n…{staleSidebarCount - 8} more" : $"\n…另有 {staleSidebarCount - 8} 个";
 					}
 					string categorySummary = UiLanguage.IsEnglish
-						? $"Current index remnants: {orphanedThreads.Count}; legacy partial-deletion remnants: {deletedSidebarRemnants.Count}."
-						: $"当前索引残留 {orphanedThreads.Count} 个；旧版半删除残留 {deletedSidebarRemnants.Count} 个。";
+						? $"Current index remnants: {orphanedThreads.Count}; legacy partial-deletion remnants: {deletedSidebarRemnants.Count}; desktop-only ghosts: {desktopOnlyGhosts.Count}."
+						: $"当前索引残留 {orphanedThreads.Count} 个；旧版半删除残留 {deletedSidebarRemnants.Count} 个；仅桌面幽灵 {desktopOnlyGhosts.Count} 个。";
 					string blockedSummary = string.Empty;
 					if (liveDescendants.Count > 0)
 					{
@@ -1429,6 +1486,22 @@ internal sealed class MainWindowController
 								if (!string.IsNullOrWhiteSpace(legacyRepair.DesktopCatalogBackupPath))
 								{
 									backupPaths.Add(legacyRepair.DesktopCatalogBackupPath);
+								}
+							}
+							if (!desktopRestarted && repairableDesktopGhosts.Count > 0)
+							{
+								OrphanIndexRepairResult ghostRepair = await Task.Run(() => ConversationIndexMaintenance.RepairDesktopOnlyGhosts(codexHome, repairableDesktopGhosts.Select((DbThread thread) => thread.Id)));
+								repairedCount += ghostRepair.RepairedCount;
+								clearedDesktopCacheCount += ghostRepair.ClearedDesktopCacheCount;
+								removedDesktopCatalogCount += ghostRepair.RemovedDesktopCatalogCount;
+								desktopRestarted |= ghostRepair.DesktopRunning;
+								if (!string.IsNullOrWhiteSpace(ghostRepair.DesktopCatalogBackupPath))
+								{
+									backupPaths.Add(ghostRepair.DesktopCatalogBackupPath);
+								}
+								if (!string.IsNullOrWhiteSpace(ghostRepair.DesktopStateBackupPath))
+								{
+									backupPaths.Add(ghostRepair.DesktopStateBackupPath);
 								}
 							}
 							if (desktopRestarted)
@@ -1678,20 +1751,22 @@ internal sealed class MainWindowController
 
 	private void UpdateSelectedCount()
 	{
-		int selectedProjects = projects.Count((ProjectGroup project) => project.IsBatchSelected);
-		int selectedConversations = projects.SelectMany((ProjectGroup project) => project.Sessions ?? new List<SessionInfo>()).Count((SessionInfo session) => !session.IsSubagent && session.IsSelected);
-		if (projectBackupMode)
+		int selectedProjects = VisibleProjectGroups().Count((ProjectGroup project) => project.IsBatchSelected);
+		int selectedConversations = VisibleProjectGroups().SelectMany((ProjectGroup project) => project.Sessions ?? new List<SessionInfo>()).Count((SessionInfo session) => !session.IsSubagent && session.IsSelected);
+		if (projectBackupMode || cleanupMode)
 		{
-			selectedCountText.Text = UiLanguage.T("已选 " + selectedProjects + " 个项目＋对话");
-			selectionHelpText.Text = UiLanguage.T("生成 .codexproject：项目目录、主对话和子代理对话一起备份");
-			backupProjectFilesButton.IsEnabled = !isBusy && selectedProjects > 0;
+			selectedCountText.Text = UiLanguage.T(cleanupMode ? "已选 " + selectedProjects + " 个待清理项目" : "已选 " + selectedProjects + " 个项目＋对话");
+			selectionHelpText.Text = UiLanguage.T(cleanupMode ? "批量清理所选项目的全部主对话、子代理和项目目录" : "生成 .codexproject：项目目录、主对话和子代理对话一起备份");
+			backupProjectFilesButton.IsEnabled = !isBusy && !cleanupMode && selectedProjects > 0;
+			cleanupSelectedButton.IsEnabled = !isBusy && ((cleanupMode && selectedProjects > 0) || (!cleanupMode && selectedConversations > 0));
 		}
 		else
 		{
-			int selectedFromProjects = projects.Count((ProjectGroup project) => (project.Sessions ?? new List<SessionInfo>()).Any((SessionInfo session) => !session.IsSubagent && session.IsSelected));
+			int selectedFromProjects = VisibleProjectGroups().Count((ProjectGroup project) => (project.Sessions ?? new List<SessionInfo>()).Any((SessionInfo session) => !session.IsSubagent && session.IsSelected));
 			selectedCountText.Text = UiLanguage.T("已选 " + selectedConversations + " 个对话 · 来自 " + selectedFromProjects + " 个项目");
 			selectionHelpText.Text = UiLanguage.T("生成 .codexchat：只备份勾选的主对话，不包含项目目录");
 			backupSelectedButton.IsEnabled = !isBusy && selectedConversations > 0;
+			cleanupSelectedButton.IsEnabled = !isBusy && selectedConversations > 0;
 		}
 	}
 
@@ -1761,10 +1836,18 @@ internal sealed class MainWindowController
 
 	private void UpdateBackupMode()
 	{
-		bool newProjectMode = projectBackupModeRadio.IsChecked == true;
-		if (newProjectMode != projectBackupMode)
+		bool newCleanupMode = cleanupModeRadio.IsChecked == true;
+		bool newProjectMode = projectBackupModeRadio.IsChecked == true && !newCleanupMode;
+		if (newProjectMode != projectBackupMode || newCleanupMode != cleanupMode)
 		{
-			if (newProjectMode)
+			if (newCleanupMode != cleanupMode)
+			{
+				foreach (ProjectGroup project in projects)
+				{
+					project.IsBatchSelected = false;
+				}
+			}
+			if (newProjectMode || newCleanupMode)
 			{
 				foreach (SessionInfo session in projects.SelectMany((ProjectGroup project) => project.Sessions ?? new List<SessionInfo>()))
 				{
@@ -1780,22 +1863,57 @@ internal sealed class MainWindowController
 			}
 		}
 		projectBackupMode = newProjectMode;
-		projectList.Tag = projectBackupMode ? "Project" : "Conversation";
-		projectSelectionTools.Visibility = projectBackupMode ? Visibility.Visible : Visibility.Collapsed;
+		cleanupMode = newCleanupMode;
+		projectList.Tag = cleanupMode ? "Cleanup" : projectBackupMode ? "Project" : "Conversation";
+		projectSelectionTools.Visibility = (projectBackupMode || cleanupMode) ? Visibility.Visible : Visibility.Collapsed;
 		backupProjectFilesButton.Visibility = projectBackupMode ? Visibility.Visible : Visibility.Collapsed;
-		backupSelectedButton.Visibility = projectBackupMode ? Visibility.Collapsed : Visibility.Visible;
-		projectPaneTitle.Text = UiLanguage.T(projectBackupMode ? "选择项目＋对话" : "选择仅对话");
-		projectPaneSubtitle.Text = UiLanguage.T(projectBackupMode ? "生成 .codexproject，包含项目目录和全部关联对话" : "生成 .codexchat，只包含勾选的主对话");
-		backupModeHelpText.Text = UiLanguage.T(projectBackupMode ? "项目＋对话备份：项目文件、主对话和子代理对话放在同一个文件里。" : "仅对话备份：可跨项目勾选主对话，不包含项目文件。");
+		backupSelectedButton.Visibility = projectBackupMode || cleanupMode ? Visibility.Collapsed : Visibility.Visible;
+		cleanupSelectedButton.Visibility = cleanupMode || !projectBackupMode ? Visibility.Visible : Visibility.Collapsed;
+		cleanupSelectedButton.Content = UiLanguage.T(cleanupMode ? "批量清理所选项目" : "批量删除已选对话");
+		projectPaneTitle.Text = UiLanguage.T(projectBackupMode ? "选择项目＋对话" : cleanupMode ? "选择要清理的项目" : "选择仅对话");
+		projectPaneSubtitle.Text = UiLanguage.T(projectBackupMode ? "生成 .codexproject，包含项目目录和全部关联对话" : cleanupMode ? "可跨项目勾选，批量处理全部对话和项目目录" : "可跨项目勾选要备份的主对话");
+		backupModeHelpText.Text = UiLanguage.T(projectBackupMode ? "项目＋对话备份：项目文件、主对话和子代理对话放在同一个文件里。" : cleanupMode ? "批量清理：跨项目选择后，一次预览并处理全部主对话、子代理和项目目录。" : "仅对话备份：可跨项目勾选主对话，不包含项目文件。");
 		UpdateSessionTypeView();
 		UpdateSelectedCount();
 	}
 
+	private bool ProjectFilter(object item)
+	{
+		if (!(item is ProjectGroup project))
+		{
+			return false;
+		}
+		ComboBoxItem selected = projectScopeCombo?.SelectedItem as ComboBoxItem;
+		return selected == null || !string.Equals(Convert.ToString(selected.Tag), "archived", StringComparison.OrdinalIgnoreCase) || project.HasArchivedSessions;
+	}
+
+	private IEnumerable<ProjectGroup> VisibleProjectGroups()
+	{
+		return projectView == null ? projects : projectView.Cast<object>().OfType<ProjectGroup>();
+	}
+
+	public bool TestCleanupSelectionModeForTest()
+	{
+		bool wasConversation = conversationBackupModeRadio.IsChecked == true;
+		cleanupModeRadio.IsChecked = true;
+		UpdateBackupMode();
+		SetProjectSelection(value: true);
+		int selected = projects.Count((ProjectGroup project) => project.IsBatchSelected);
+		string actionText = cleanupSelectedButton.Content?.ToString() ?? string.Empty;
+		bool result = cleanupMode && string.Equals(Convert.ToString(projectList.Tag), "Cleanup", StringComparison.Ordinal) && projectSelectionTools.Visibility == Visibility.Visible && cleanupSelectedButton.Visibility == Visibility.Visible && selected > 0 && (actionText.IndexOf("清理", StringComparison.OrdinalIgnoreCase) >= 0 || actionText.IndexOf("clean", StringComparison.OrdinalIgnoreCase) >= 0);
+		if (wasConversation)
+		{
+			conversationBackupModeRadio.IsChecked = true;
+			UpdateBackupMode();
+		}
+		return result;
+	}
+
 	private void SetProjectSelection(bool value)
 	{
-		foreach (ProjectGroup project in projects)
+		foreach (ProjectGroup project in VisibleProjectGroups())
 		{
-			if (project.CanBackupFiles)
+			if (cleanupMode ? project.CanCleanup : project.CanBackupFiles)
 			{
 				project.IsBatchSelected = value;
 			}
@@ -3070,6 +3188,222 @@ internal sealed class MainWindowController
 		}
 	}
 
+	private async Task CleanupSelectedConversationsAsync()
+	{
+		if (isBusy || cleanupMode || !EnsureCodexClosedForConversationWrite())
+		{
+			return;
+		}
+		List<SessionInfo> selected = VisibleProjectGroups().SelectMany((ProjectGroup project) => project.Sessions ?? new List<SessionInfo>()).Where((SessionInfo session) => session != null && !session.IsSubagent && session.IsSelected && session.CanDelete).GroupBy((SessionInfo session) => session.ThreadId, StringComparer.OrdinalIgnoreCase).Select((IGrouping<string, SessionInfo> group) => group.First()).ToList();
+		if (selected.Count == 0)
+		{
+			AppDialog.ShowCompat(window, "请先在右侧勾选一个或多个主对话。", "尚未选择对话", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+			return;
+		}
+		List<ProjectGroup> sourceProjects = VisibleProjectGroups().Where((ProjectGroup project) => (project.Sessions ?? new List<SessionInfo>()).Any((SessionInfo session) => selected.Any((SessionInfo item) => string.Equals(item.ThreadId, session.ThreadId, StringComparison.OrdinalIgnoreCase)))).ToList();
+		HashSet<ProjectGroup> directoryEligible = new HashSet<ProjectGroup>();
+		foreach (ProjectGroup project in sourceProjects)
+		{
+			List<SessionInfo> projectMain = (project.Sessions ?? new List<SessionInfo>()).Where((SessionInfo session) => !session.IsSubagent && session.CanDelete).ToList();
+			IEnumerable<SessionInfo> selectedProjectMain = projectMain.Where((SessionInfo session) => selected.Any((SessionInfo item) => string.Equals(item.ThreadId, session.ThreadId, StringComparison.OrdinalIgnoreCase)));
+			BatchProjectDeleteScope scope = BuildBatchProjectDeleteScope(project, selectedProjectMain);
+			if (projectMain.Count > 0 && scope.AllMainConversationsSelected && string.IsNullOrWhiteSpace(scope.AvailabilityBlockReason) && project.CanBackupFiles)
+			{
+				directoryEligible.Add(project);
+			}
+		}
+		BatchProjectCleanupOptions options = MultiConversationCleanupDialog.Show(window, sourceProjects, directoryEligible);
+		if (options == null)
+		{
+			return;
+		}
+		List<SessionDeletionPlan> plans = BuildDeletionPlans(selected);
+		int totalAffected = plans.Sum((SessionDeletionPlan plan) => plan.AffectedSessions.Count);
+		if (AppDialog.ShowCompat(window, (options.ConversationMode == ConversationDeleteMode.Permanent ? "将永久删除 " : "将把 ") + totalAffected + " 个所选主对话及其关联子代理移入处理流程。是否继续？", "确认批量删除对话", MessageBoxButton.YesNo, MessageBoxImage.Exclamation) != MessageBoxResult.Yes)
+		{
+			return;
+		}
+		SetBusy(true, options.ConversationMode == ConversationDeleteMode.MoveToTrash ? "正在批量移入软件回收站……" : "正在批量永久删除会话……");
+		int completed = 0;
+		List<string> errors = new List<string>();
+		Dictionary<ProjectGroup, List<DeletedSessionResult>> resultsByProject = new Dictionary<ProjectGroup, List<DeletedSessionResult>>();
+		try
+		{
+			await Task.Run(delegate
+			{
+				foreach (SessionDeletionPlan plan in plans)
+				{
+					ProjectGroup owner = sourceProjects.FirstOrDefault((ProjectGroup project) => (project.Sessions ?? new List<SessionInfo>()).Any((SessionInfo session) => string.Equals(session.ThreadId, plan.Root.ThreadId, StringComparison.OrdinalIgnoreCase)));
+					string path = owner?.ProjectPath ?? ConversationStorage.ResolveProjectPath(plan.Root, null);
+					try
+					{
+						DeletedSessionResult result = options.ConversationMode == ConversationDeleteMode.MoveToTrash ? ConversationStorage.MoveToTrash(plan.Root, path, plan.AffectedSessions) : ConversationStorage.DeletePermanently(plan.Root, plan.AffectedSessions);
+						if (owner != null)
+						{
+							if (!resultsByProject.TryGetValue(owner, out List<DeletedSessionResult> list))
+							{
+								list = new List<DeletedSessionResult>();
+								resultsByProject[owner] = list;
+							}
+							list.Add(result);
+						}
+						completed += plan.AffectedSessions.Count;
+					}
+					catch (Exception ex) { errors.Add(plan.Root.ShortId + " · " + ex.Message); }
+				}
+				if (errors.Count == 0)
+				{
+					foreach (BatchProjectCleanupItem item in options.Projects.Where((BatchProjectCleanupItem item) => item.ProjectMode != ProjectDeleteMode.None && directoryEligible.Contains(item.Project)))
+					{
+						try
+						{
+							string path = ConversationStorage.ValidateProjectPath(item.Project.ProjectPath);
+							ConversationStorage.DeleteProject(path, item.ProjectMode);
+							if (options.ConversationMode == ConversationDeleteMode.MoveToTrash && resultsByProject.TryGetValue(item.Project, out List<DeletedSessionResult> deleted))
+							{
+								foreach (DeletedSessionResult result in deleted)
+								foreach (string backupPath in result.BackupPaths.Count > 0 ? result.BackupPaths : new List<string> { result.BackupPath })
+									ConversationStorage.MarkProjectHandled(backupPath, path, item.ProjectMode);
+							}
+						}
+						catch (Exception ex) { errors.Add(item.Project.DisplayName + " · " + ex.Message); }
+					}
+				}
+			});
+		}
+		finally { SetBusy(false, null); }
+		await RefreshDataAsync();
+		string resultText = "已处理 " + completed + " 个对话。" + (errors.Count == 0 ? string.Empty : "\n\n有 " + errors.Count + " 项失败：\n" + string.Join("\n", errors.Take(8)));
+		SetStatus(errors.Count == 0 ? "批量删除对话完成。" : "批量删除对话部分完成。", errors.Count > 0);
+		AppDialog.ShowCompat(window, resultText, errors.Count == 0 ? "删除完成" : "部分完成", MessageBoxButton.OK, errors.Count == 0 ? MessageBoxImage.Asterisk : MessageBoxImage.Warning);
+	}
+
+	private async Task CleanupSelectedProjectsAsync()
+	{
+		if (isBusy || !cleanupMode)
+		{
+			return;
+		}
+		if (!EnsureCodexClosedForConversationWrite())
+		{
+			return;
+		}
+		List<ProjectGroup> selectedProjects = VisibleProjectGroups().Where((ProjectGroup project) => project.IsBatchSelected && project.CanCleanup).ToList();
+		if (selectedProjects.Count == 0)
+		{
+			AppDialog.ShowCompat(window, "请先在左侧勾选一个或多个项目。", "尚未选择项目", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+			return;
+		}
+		List<string> paths = new List<string>();
+		foreach (ProjectGroup project in selectedProjects)
+		{
+			if (!string.IsNullOrWhiteSpace(project.ProjectPath) && Directory.Exists(project.ProjectPath))
+			{
+				string path = System.IO.Path.GetFullPath(TextHelpers.StripExtendedPrefix(project.ProjectPath));
+				if (paths.Any((string existing) => string.Equals(TextHelpers.CanonicalPath(existing), TextHelpers.CanonicalPath(path), StringComparison.OrdinalIgnoreCase)))
+				{
+					AppDialog.ShowCompat(window, "所选项目中有多个项目记录指向同一个文件夹，为避免重复删除，已停止本次操作：\n" + path, "项目路径重复", MessageBoxButton.OK, MessageBoxImage.Warning);
+					return;
+				}
+				paths.Add(path);
+			}
+		}
+		BatchProjectCleanupOptions options = MultiProjectCleanupDialog.Show(window, selectedProjects);
+		if (options == null)
+		{
+			return;
+		}
+		List<SessionInfo> selectedSessions = selectedProjects.SelectMany((ProjectGroup project) => project.Sessions ?? new List<SessionInfo>()).Where((SessionInfo session) => session != null && session.CanDelete).GroupBy((SessionInfo session) => session.ThreadId, StringComparer.OrdinalIgnoreCase).Select((IGrouping<string, SessionInfo> group) => group.First()).ToList();
+		List<SessionDeletionPlan> plans = BuildDeletionPlans(selectedSessions);
+		if (plans.Count == 0)
+		{
+			AppDialog.ShowCompat(window, "所选项目没有可删除的主对话。", "没有可处理的会话", MessageBoxButton.OK, MessageBoxImage.Asterisk);
+			return;
+		}
+		int totalAffected = plans.Sum((SessionDeletionPlan plan) => plan.AffectedSessions.Count);
+		string projectSummary = string.Join("\n", options.Projects.Select((BatchProjectCleanupItem item) => "• " + item.Project.DisplayName + "：" + (item.ProjectMode == ProjectDeleteMode.None ? "保留目录" : item.ProjectMode == ProjectDeleteMode.RecycleBin ? "移入 Windows 回收站" : "永久删除目录")));
+		string confirmation = (options.ConversationMode == ConversationDeleteMode.Permanent ? "将永久删除" : "将把") + " " + totalAffected + " 个主对话/子代理，涉及 " + selectedProjects.Count + " 个项目。\n\n" + projectSummary + "\n\n本操作会先通过 Codex 官方删除接口，再清理本地文件和索引。是否继续？";
+		if (AppDialog.ShowCompat(window, confirmation, "确认跨项目批量清理", MessageBoxButton.YesNo, MessageBoxImage.Exclamation) != MessageBoxResult.Yes)
+		{
+			return;
+		}
+		SetBusy(true, options.ConversationMode == ConversationDeleteMode.MoveToTrash ? "正在批量移入软件回收站……" : "正在批量永久删除会话……");
+		int completed = 0;
+		List<string> errors = new List<string>();
+		Dictionary<ProjectGroup, List<DeletedSessionResult>> resultsByProject = new Dictionary<ProjectGroup, List<DeletedSessionResult>>();
+		try
+		{
+			await Task.Run(delegate
+			{
+				foreach (SessionDeletionPlan plan in plans)
+				{
+					ProjectGroup owner = selectedProjects.FirstOrDefault((ProjectGroup project) => (project.Sessions ?? new List<SessionInfo>()).Any((SessionInfo session) => string.Equals(session.ThreadId, plan.Root.ThreadId, StringComparison.OrdinalIgnoreCase)));
+					string projectPath = owner == null ? ConversationStorage.ResolveProjectPath(plan.Root, null) : owner.ProjectPath;
+					try
+					{
+						DeletedSessionResult result = options.ConversationMode == ConversationDeleteMode.MoveToTrash ? ConversationStorage.MoveToTrash(plan.Root, projectPath, plan.AffectedSessions) : ConversationStorage.DeletePermanently(plan.Root, plan.AffectedSessions);
+						if (owner != null)
+						{
+							if (!resultsByProject.TryGetValue(owner, out List<DeletedSessionResult> list))
+							{
+								list = new List<DeletedSessionResult>();
+								resultsByProject[owner] = list;
+							}
+							list.Add(result);
+						}
+						completed += plan.AffectedSessions.Count;
+					}
+					catch (Exception ex)
+					{
+						errors.Add(plan.Root.ShortId + " · " + ex.Message);
+					}
+				}
+				if (errors.Count == 0)
+				{
+					foreach (BatchProjectCleanupItem item in options.Projects)
+					{
+						if (item.ProjectMode == ProjectDeleteMode.None)
+						{
+							continue;
+						}
+						try
+						{
+							string projectPath = ConversationStorage.ValidateProjectPath(item.Project.ProjectPath);
+							ConversationStorage.DeleteProject(projectPath, item.ProjectMode);
+							if (options.ConversationMode == ConversationDeleteMode.MoveToTrash && resultsByProject.TryGetValue(item.Project, out List<DeletedSessionResult> deleted))
+							{
+								foreach (DeletedSessionResult result in deleted)
+								{
+									foreach (string backupPath in result.BackupPaths.Count > 0 ? result.BackupPaths : new List<string> { result.BackupPath })
+									{
+										ConversationStorage.MarkProjectHandled(backupPath, projectPath, item.ProjectMode);
+									}
+								}
+							}
+						}
+						catch (Exception ex)
+						{
+							errors.Add(item.Project.DisplayName + " · " + ex.Message);
+						}
+					}
+				}
+			});
+		}
+		finally
+		{
+			SetBusy(false, null);
+		}
+		await RefreshDataAsync();
+		string resultText = "已处理 " + completed + " 个对话，涉及 " + selectedProjects.Count + " 个项目。";
+		if (errors.Count > 0)
+		{
+			resultText += "\n\n有 " + errors.Count + " 项失败：\n" + string.Join("\n", errors.Take(8));
+		}
+		resultText += "\n\n重新打开 Codex 后，已删除会话不会再出现在侧栏。";
+		SetStatus(errors.Count == 0 ? "跨项目批量清理完成。" : "跨项目批量清理部分完成。", errors.Count > 0);
+		AppDialog.ShowCompat(window, resultText, errors.Count == 0 ? "清理完成" : "部分完成", MessageBoxButton.OK, errors.Count == 0 ? MessageBoxImage.Asterisk : MessageBoxImage.Warning);
+	}
+
 	private async Task BackupSelectedAsync()
 	{
 		List<BackupProjectSelection> selections = projects.Select((ProjectGroup project) => new BackupProjectSelection
@@ -4334,10 +4668,13 @@ internal sealed class MainWindowController
 		backupFolderBox.IsEnabled = !busy;
 		projectBackupModeRadio.IsEnabled = !busy;
 		conversationBackupModeRadio.IsEnabled = !busy;
+		cleanupModeRadio.IsEnabled = !busy;
 		mainSessionsTabRadio.IsEnabled = !busy;
 		subagentSessionsTabRadio.IsEnabled = !busy;
 		selectAllProjectsButton.IsEnabled = !busy;
 		clearProjectsButton.IsEnabled = !busy;
+		bool hasSelectedConversations = VisibleProjectGroups().SelectMany((ProjectGroup project) => project.Sessions ?? new List<SessionInfo>()).Any((SessionInfo session) => !session.IsSubagent && session.IsSelected);
+		cleanupSelectedButton.IsEnabled = !busy && (cleanupMode ? VisibleProjectGroups().Any((ProjectGroup project) => project.IsBatchSelected) : hasSelectedConversations);
 		inspectButton.IsEnabled = !busy;
 		importButton.IsEnabled = !busy;
 		sessionList.IsEnabled = !busy;
@@ -4352,6 +4689,10 @@ internal sealed class MainWindowController
 			SetStatus(message, error: false);
 		}
 		languageButton.IsEnabled = !busy;
+		if (themeToggleButton != null)
+		{
+			themeToggleButton.IsEnabled = !busy;
+		}
 	}
 
 	private void SetStatus(string text, bool error)

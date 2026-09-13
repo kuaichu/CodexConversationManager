@@ -229,11 +229,14 @@ try {
         [pscustomobject]@{ File = 'render-preview-main-window-max-en-US.png'; Language = 'en-US'; Name = 'English preview inside maximized main-window render test' },
         [pscustomobject]@{ File = 'render-import-project-en-US.png'; Language = 'en-US'; Name = 'English import render test' },
         [pscustomobject]@{ File = 'render-dialog-theme-en-US.png'; Language = 'en-US'; Name = 'English dialog-theme render test' },
-        [pscustomobject]@{ File = 'render-paginated-completion-en-US.png'; Language = 'en-US'; Name = 'English paginated-completion render test' }
+        [pscustomobject]@{ File = 'render-paginated-completion-en-US.png'; Language = 'en-US'; Name = 'English paginated-completion render test' },
+        [pscustomobject]@{ File = 'render-default-backup-dark.png'; Language = 'zh-CN'; Theme = 'dark'; Name = 'Chinese dark mode render test' },
+        [pscustomobject]@{ File = 'render-default-backup-dark-en.png'; Language = 'en-US'; Theme = 'dark'; Name = 'English dark mode render test' }
     )
     foreach ($renderCase in $renderCases) {
         $renderPath = Join-Path $artifactRoot $renderCase.File
-        Invoke-MigratorTest "--render-test `"$renderPath`" --language $($renderCase.Language)" $renderCase.Name $renderPath
+        $themeArg = if ($renderCase.PSObject.Properties['Theme'] -and $renderCase.Theme) { " --theme $($renderCase.Theme)" } else { "" }
+        Invoke-MigratorTest "--render-test `"$renderPath`" --language $($renderCase.Language)$themeArg" $renderCase.Name $renderPath
         $png = [IO.File]::ReadAllBytes($renderPath)
         if ($png.Length -lt 8 -or $png[0] -ne 137 -or $png[1] -ne 80 -or $png[2] -ne 78 -or $png[3] -ne 71) {
             throw "$($renderCase.Name) did not create a valid PNG."

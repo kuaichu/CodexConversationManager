@@ -24,6 +24,8 @@ internal sealed class SessionInfo : NotifyObject
 
 	public string ModelProvider { get; set; }
 
+	public string Model { get; set; }
+
 	public string CliVersion { get; set; }
 
 	public string CreatedAt { get; set; }
@@ -141,7 +143,9 @@ internal sealed class SessionInfo : NotifyObject
 		}
 	}
 
-	public string DisplayMetadata => DisplayTime + " · " + DisplaySource + " · " + DisplaySize + " · " + ShortId;
+	public string DisplayModel => !string.IsNullOrWhiteSpace(Model) ? TextHelpers.CleanLine(Model, 48, UiLanguage.T("未知模型")) : UiLanguage.T("未知模型");
+
+	public string DisplayMetadata => DisplayTime + " · " + DisplaySource + " · " + DisplayModel + " · " + DisplaySize + " · " + ShortId;
 
 	public string ShortId
 	{

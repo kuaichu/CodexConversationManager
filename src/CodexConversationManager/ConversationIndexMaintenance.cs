@@ -46,6 +46,64 @@ internal static class ConversationIndexMaintenance
 		return result;
 	}
 
+	public static List<DbThread> FindDesktopOnlyGhostThreads(string codexHome)
+	{
+		string catalogPath = WinSqliteMaintenance.FindDesktopCatalogDatabase(codexHome);
+		if (string.IsNullOrWhiteSpace(catalogPath) || !File.Exists(catalogPath))
+		{
+			return new List<DbThread>();
+		}
+		HashSet<string> coreIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		string corePath = WinSqliteMaintenance.FindActiveDatabase(codexHome);
+		if (!string.IsNullOrWhiteSpace(corePath) && File.Exists(corePath))
+		{
+			coreIds = new HashSet<string>(WinSqliteReader.ReadThreads(corePath).Select((DbThread thread) => thread.Id).Where((string id) => !string.IsNullOrWhiteSpace(id)), StringComparer.OrdinalIgnoreCase);
+		}
+		HashSet<string> rolloutIds;
+		try
+		{
+			rolloutIds = new HashSet<string>(NativeSessionCatalog.Scan(codexHome).Select((SessionInfo session) => session.ThreadId).Where((string id) => !string.IsNullOrWhiteSpace(id)), StringComparer.OrdinalIgnoreCase);
+		}
+		catch
+		{
+			// Fail closed: an unreadable rollout tree must never turn into a bulk ghost deletion.
+			throw;
+		}
+		return WinSqliteReader.ReadDesktopCatalogThreads(catalogPath)
+			.Where((DbThread thread) => thread != null && Guid.TryParse(thread.Id, out _) && !coreIds.Contains(thread.Id) && !rolloutIds.Contains(thread.Id))
+			.GroupBy((DbThread thread) => thread.Id, StringComparer.OrdinalIgnoreCase)
+			.Select((IGrouping<string, DbThread> group) => group.First())
+			.OrderByDescending((DbThread thread) => thread.UpdatedAtMilliseconds)
+			.ToList();
+	}
+
+	public static OrphanIndexRepairResult RepairDesktopOnlyGhosts(string codexHome, IEnumerable<string> confirmedThreadIds)
+	{
+		HashSet<string> confirmed = new HashSet<string>((confirmedThreadIds ?? Enumerable.Empty<string>()).Where((string id) => Guid.TryParse(id, out _)), StringComparer.OrdinalIgnoreCase);
+		List<DbThread> ghosts = FindDesktopOnlyGhostThreads(codexHome).Where((DbThread thread) => confirmed.Contains(thread.Id)).ToList();
+		OrphanIndexRepairResult result = new OrphanIndexRepairResult { DetectedCount = ghosts.Count };
+		if (ghosts.Count == 0)
+		{
+			return result;
+		}
+		if (CodexDesktopProjectRegistry.IsDesktopRunning(codexHome))
+		{
+			result.DesktopRunning = true;
+			return result;
+		}
+		CodexDesktopProjectRegistry.EnsureImportCanWrite(codexHome);
+		string[] ids = ghosts.Select((DbThread thread) => thread.Id).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+		DesktopCatalogRemovalResult catalog = WinSqliteMaintenance.RemoveDesktopCatalogThreads(codexHome, ids);
+		DesktopThreadRemovalResult desktop = CodexDesktopProjectRegistry.RemoveThreads(codexHome, ids);
+		DesktopTaskCacheInvalidationResult cache = CodexDesktopTaskCache.InvalidateThreads(codexHome, ids);
+		result.RepairedCount = catalog.RemovedCatalogEntryCount;
+		result.RemovedDesktopCatalogCount = catalog.RemovedCatalogEntryCount;
+		result.DesktopCatalogBackupPath = catalog.BackupPath;
+		result.DesktopStateBackupPath = desktop.BackupPath;
+		result.ClearedDesktopCacheCount = cache.ClearedDirectoryCount;
+		return result;
+	}
+
 	public static OrphanIndexRepairResult RepairSelectedOrphans(string codexHome, IEnumerable<string> confirmedThreadIds)
 	{
 		HashSet<string> confirmed = new HashSet<string>((confirmedThreadIds ?? Enumerable.Empty<string>()).Where((string id) => !string.IsNullOrWhiteSpace(id)), StringComparer.OrdinalIgnoreCase);

@@ -22,6 +22,7 @@ internal static class Program
 		string report = string.Empty;
 		string text = string.Empty;
 		string language = string.Empty;
+		string themeArg = string.Empty;
 		string output = string.Empty;
 		string text2 = string.Empty;
 		string text3 = string.Empty;
@@ -53,8 +54,13 @@ internal static class Program
 			{
 				language = args[++i];
 			}
+			else if (string.Equals(args[i], "--theme", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+			{
+				themeArg = args[++i];
+			}
 		}
 		UiLanguage.Initialize(language);
+		UiTheme.Initialize(themeArg);
 		if (flag)
 		{
 			return RunSelfTest(report);
@@ -421,6 +427,10 @@ internal static class Program
 						{
 							throw new InvalidOperationException("main/subagent switch retained stale selection controls");
 						}
+						if (!controller.TestCleanupSelectionModeForTest())
+						{
+							throw new InvalidOperationException("cross-project cleanup selection mode did not expose the cleanup action");
+						}
 						if (!(await controller.WaitForSelectedProjectStorageForTest()))
 						{
 							throw new InvalidOperationException("project storage metrics did not complete");
@@ -757,6 +767,10 @@ internal static class Program
 				conversationReadResult.Messages[2].Text != "继续" || conversationReadResult.Messages[3].Text != "继续")
 			{
 				throw new InvalidOperationException("conversation preview lazy parser or duplicate preservation test failed");
+			}
+			if (!ConversationPreviewDialog.VerifyFixtureForTest(session))
+			{
+				throw new InvalidOperationException("batch cleanup conversation preview fixture could not read real message content");
 			}
 			if (BackupPackageFormat.ExtensionFor(includesProjectFiles: false) != ".codexchat" || BackupPackageFormat.ExtensionFor(includesProjectFiles: true) != ".codexproject" ||
 				!BackupPackageFormat.IsFormalPackage("legacy.codexpack") || !BackupPackageFormat.IsFormalPackage("chat.codexchat") || !BackupPackageFormat.IsFormalPackage("project.codexproject") ||
@@ -1168,6 +1182,18 @@ internal static class Program
 			{
 				throw new InvalidOperationException("deleting the original conversation affected its independent copy");
 			}
+			string archivedFixtureId = "12111111-1111-4111-8111-111111111111";
+			string archivedRoot = Path.Combine(text, "archived_sessions", "2026", "01", "02");
+			Directory.CreateDirectory(archivedRoot);
+			string archivedFixturePath = Path.Combine(archivedRoot, "rollout-2026-01-02T03-04-05-" + archivedFixtureId + ".jsonl");
+			File.WriteAllText(archivedFixturePath, fixtureContents.Replace(testThreadId, archivedFixtureId), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+			List<SessionInfo> archivedFixtureSessions = NativeSessionCatalog.Scan(text);
+			CatalogResult archivedFixtureCatalog = CodexCatalog.Build(archivedFixtureSessions);
+			ProjectGroup archivedFixtureProject = archivedFixtureCatalog.Projects.FirstOrDefault((ProjectGroup project) => project.Sessions.Any((SessionInfo session) => string.Equals(session.ThreadId, archivedFixtureId, StringComparison.OrdinalIgnoreCase)));
+			if (archivedFixtureProject == null || !archivedFixtureProject.HasArchivedSessions || archivedFixtureProject.ArchivedMainCount != 1 || archivedFixtureProject.ArchivedInternalCount != 0 || !archivedFixtureProject.Sessions.Any((SessionInfo session) => string.Equals(session.ThreadId, archivedFixtureId, StringComparison.OrdinalIgnoreCase) && session.Archived))
+			{
+				throw new InvalidOperationException("archived_sessions fixture was not grouped into its cwd project with archived counts");
+			}
 			ConversationStorage.Restore(trashSessionInfo);
 			if (!File.Exists(text3) || File.Exists(deletedSessionResult.BackupPath) || ConversationStorage.ReadTrash().Any((TrashSessionInfo item) => string.Equals(item.ThreadId, testThreadId, StringComparison.OrdinalIgnoreCase)))
 			{
@@ -1406,6 +1432,38 @@ internal static class Program
 			File.Delete(guardedChildPath);
 			WinSqliteMaintenance.RemoveThreads(text, new string[2] { guardedParentId, guardedChildId });
 			CodexDesktopProjectRegistry.RemoveThreads(text, new string[2] { guardedParentId, guardedChildId });
+
+			string desktopOnlyGhostId = "01a08a32-7fe4-7ca3-8bdb-2d5040190993";
+			WinSqliteMaintenance.AddDesktopCatalogTestThread(text, desktopOnlyGhostId, "桌面幽灵会话测试", newProject);
+			WriteDesktopStateFixtureForTest(text, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+			{
+				{ "ghost-project", newProject }
+			}, desktopOnlyGhostId, "ghost-project", newProject);
+			List<DbThread> desktopOnlyGhosts = ConversationIndexMaintenance.FindDesktopOnlyGhostThreads(text);
+			if (desktopOnlyGhosts.Count != 1 || !string.Equals(desktopOnlyGhosts[0].Id, desktopOnlyGhostId, StringComparison.OrdinalIgnoreCase))
+			{
+				throw new InvalidOperationException("desktop-only catalog entry without a core thread or rollout was not detected precisely");
+			}
+			string rolloutOnlyId = "02a08a32-7fe4-7ca3-8bdb-2d5040190993";
+			string rolloutOnlyPath = Path.Combine(text2, "rollout-2026-01-08T03-04-05-" + rolloutOnlyId + ".jsonl");
+			File.WriteAllText(rolloutOnlyPath, fixtureContents.Replace(testThreadId, rolloutOnlyId).Replace("真正的问题", "真实 rollout 不应误判"), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+			WinSqliteMaintenance.AddDesktopCatalogTestThread(text, rolloutOnlyId, "真实 rollout 不应误判", newProject);
+			if (ConversationIndexMaintenance.FindDesktopOnlyGhostThreads(text).Any((DbThread item) => string.Equals(item.Id, rolloutOnlyId, StringComparison.OrdinalIgnoreCase)))
+			{
+				throw new InvalidOperationException("desktop catalog entry with a real rollout was incorrectly classified as a ghost");
+			}
+			File.Delete(rolloutOnlyPath);
+			WinSqliteMaintenance.RemoveDesktopCatalogThreads(text, new string[1] { rolloutOnlyId });
+			OrphanIndexRepairResult desktopGhostRepair = ConversationIndexMaintenance.RepairDesktopOnlyGhosts(text, new string[1] { desktopOnlyGhostId });
+			if (desktopGhostRepair.RepairedCount != 1 || desktopGhostRepair.RemovedDesktopCatalogCount != 1 || string.IsNullOrWhiteSpace(desktopGhostRepair.DesktopCatalogBackupPath) || !File.Exists(desktopGhostRepair.DesktopCatalogBackupPath) || WinSqliteMaintenance.CountDesktopCatalogThreads(text, new string[1] { desktopOnlyGhostId }) != 0)
+			{
+				throw new InvalidOperationException("desktop-only ghost repair did not remove the catalog entry safely");
+			}
+			AssertDesktopThreadAbsentForTest(Path.Combine(text, ".codex-global-state.json"), desktopOnlyGhostId);
+			if (ConversationIndexMaintenance.FindDesktopOnlyGhostThreads(text).Any((DbThread item) => string.Equals(item.Id, desktopOnlyGhostId, StringComparison.OrdinalIgnoreCase)))
+			{
+				throw new InvalidOperationException("desktop-only ghost remained detectable after repair");
+			}
 
 			string legacySidebarThreadId = "55555555-5555-4555-8555-555555555555";
 			string legacySidebarPath = Path.Combine(text2, "rollout-2026-01-05T03-04-05-" + legacySidebarThreadId + ".jsonl");
@@ -1857,9 +1915,9 @@ internal static class Program
 				{
 					"MergeModeRadio", "CopyModeRadio", "ImportModeHelpText", "ConversationOverlay", "ConversationList", "ConversationCloseButton", "ConversationCanvas", "ConversationDialogHost", "TrashButton", "BackupProjectFilesButton", "ProjectRestorePanel",
 					"RestoreProjectFilesCheck", "ProjectConflictCombo", "BackupFolderBox", "BrowseBackupFolderButton", "SelectAllProjectsButton", "ClearProjectsButton", "TargetPathLabel", "TargetPathHelpText", "MaximizeGlyph", "RestoreGlyph",
-					"ProjectBackupModeRadio", "ConversationBackupModeRadio", "BackupModeHelpText", "ProjectSelectionTools", "SessionSelectionTools", "ToggleSessionSelectionButton", "DeleteSelectedSessionsButton", "ProjectPaneTitle", "ProjectPaneSubtitle", "SessionModeHint", "SelectionHelpText",
+					"ProjectBackupModeRadio", "ConversationBackupModeRadio", "CleanupModeRadio", "CleanupSelectedButton", "ProjectScopeCombo", "BackupModeHelpText", "ProjectSelectionTools", "SessionSelectionTools", "ToggleSessionSelectionButton", "DeleteSelectedSessionsButton", "ProjectPaneTitle", "ProjectPaneSubtitle", "SessionModeHint", "SelectionHelpText",
 					"MainSessionsTabRadio", "SubagentSessionsTabRadio", "CopyProjectPathButton", "ProjectSizeText",
-					"BrowsePackageButton", "BrowseTargetButton", "ImportProgressPanel", "ImportStageText", "ImportStageDetailText", "ImportElapsedText", "ImportStageProgress", "ImportWorkflowGrid", "ImportActionBar", "LanguageButton",
+					"BrowsePackageButton", "BrowseTargetButton", "ImportProgressPanel", "ImportStageText", "ImportStageDetailText", "ImportElapsedText", "ImportStageProgress", "ImportWorkflowGrid", "ImportActionBar", "LanguageButton", "ThemeToggleButton",
 					"ConversationContentLayout", "ConversationNavigationHost", "ConversationNavigationScroller", "ConversationNavigationRail", "ConversationNavigationPreviewPopup", "ConversationNavigationPreviewTitle", "ConversationNavigationPreviewResponse"
 				};
 				string[] array2 = array;

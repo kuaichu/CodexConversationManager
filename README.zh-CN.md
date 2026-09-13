@@ -1,8 +1,10 @@
-# Codex Conversation Manager
+# Codex Conversation Manager DSH
 
 **Windows 上的 Codex 对话与项目管理、备份和迁移工具。**
 
 [English](README.md) · 当前版本：v1.0.3
+
+本项目是 [HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager) v1.0.3 的社区增强版。感谢原作者 [HikiTanis](https://github.com/HikiTanis) 开源基础项目；本仓库的界面、批量清理、对话预览、归档扫描、Ghost 任务修复和模型显示均是在其工作之上扩展，仍遵循原项目的 MIT License。
 
 它在本机统一整理 Codex 项目、主对话和子代理对话，解决项目改名或移动后对话失联、会话占用不透明、跨电脑迁移困难，以及删除后侧边栏残留等问题。
 
@@ -20,12 +22,13 @@
 
 | 功能 | 能做什么 |
 | --- | --- |
-| 对话与项目管理 | 按项目汇总目录、文件数量和总大小；主对话与子代理分栏显示；完整只读查看长对话，默认定位最新消息；左侧用户消息导航轨支持悬停预览、点击或拖动跳转，预览框会随主窗口缩放 |
+| 对话与项目管理 | 按项目汇总目录、文件数量和总大小；显示每条对话使用的模型；主对话与子代理分栏显示；完整只读查看长对话，默认定位最新消息；左侧用户消息导航轨支持悬停预览、点击或拖动跳转，预览框会随主窗口缩放 |
 | 备份与迁移 | 跨项目选择多个主对话创建 `.codexchat`，或把一个或多个项目及其主对话、子代理创建为 `.codexproject` |
 | 路径重新关联 | 导入时把对话中的原项目路径映射到新目录，并更新本地任务索引和桌面项目归属 |
 | 两种导入身份 | “智能合并”延续同源对话；“独立复制”生成全新 Thread ID 和会话文件，删除其中一份不会影响另一份 |
-| 清理与恢复 | 批量移入软件回收站、恢复或永久删除；选中项目全部主对话时可选择同时处理项目目录；可修复有明确证据的旧侧边栏残留 |
-| 中英文界面 | 可在软件内切换简体中文与英文 |
+| 清理与恢复 | 跨项目勾选对话或项目并一次批量处理；项目目录可分别保留、移入 Windows 回收站或永久删除；可修复旧侧边栏残留和 DesktopOnly Ghost 任务 |
+| 归档与预览 | 可筛选 Codex 归档会话；删除前查看标题、Thread ID、工作目录、文件路径和真实消息正文 |
+| 界面 | Fluent 风格界面，支持浅色/深色主题以及简体中文/英文切换 |
 
 查看、备份、预检和导入均由软件内置引擎完成，不需要额外的迁移程序，也不需要 Codex CLI。**只有删除会话（移入软件回收站或永久删除）和修复旧侧边栏残留需要 Codex CLI 0.148.0 或更高版本；建议使用最新版。**单独处理项目目录的 Windows 回收站或永久删除不依赖 CLI。
 
@@ -50,7 +53,7 @@
 
    两处 SHA-256 应一致。
 3. 将 ZIP 完整解压到一个新文件夹，不要在压缩包内运行，也不要把新旧版本文件混放。
-4. 双击 `Start.cmd`，或运行 `CodexConversationManager.exe`。
+4. 双击 `Start.cmd`，或运行 `CodexConversationManager.Model.exe`。
 
 程序当前没有 Authenticode 数字签名，Windows 可能提示“未知发布者”。请只从可信 Release 页面下载并先核对 SHA-256。
 
@@ -119,4 +122,8 @@
 
 源码仓库还提供：`docs/releases/v1.0.3.md`（发布说明）、`CHANGELOG.md`（版本记录）、`docs/RELEASING.md`（发布流程）、`.github/SUPPORT.md`（问题反馈）和 `.github/CONTRIBUTING.md`（贡献指南）。
 
-本项目使用 [MIT License](LICENSE)。
+## 上游与许可证
+
+- 原项目：[HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager)
+- 原作者：[HikiTanis](https://github.com/HikiTanis)
+- 本社区增强版使用与上游相同的 [MIT License](LICENSE)。

@@ -74,6 +74,7 @@ internal static class WinSqliteReader
 				TextColumn(threadColumns, "t", "title", "name", "first_user_message", "preview"),
 				TextColumn(threadColumns, "t", "source", "source_kind"),
 				TextColumn(threadColumns, "t", "thread_source"),
+				TextColumn(threadColumns, "t", "model"),
 				NumericColumn(threadColumns, "t", "archived"),
 				UpdatedAtMilliseconds(threadColumns, "t"),
 				ParentThreadId(threadColumns, edgeColumns),
@@ -103,10 +104,11 @@ internal static class WinSqliteReader
 					Title = ColumnText(statement, 3),
 					Source = ColumnText(statement, 4),
 					ThreadSource = ColumnText(statement, 5),
-					Archived = (sqlite3_column_int64(statement, 6) != 0),
-					UpdatedAtMilliseconds = sqlite3_column_int64(statement, 7),
-					ParentThreadId = ColumnText(statement, 8),
-					HistoryMode = ColumnText(statement, 9)
+					Model = ColumnText(statement, 6),
+					Archived = (sqlite3_column_int64(statement, 7) != 0),
+					UpdatedAtMilliseconds = sqlite3_column_int64(statement, 8),
+					ParentThreadId = ColumnText(statement, 9),
+					HistoryMode = ColumnText(statement, 10)
 				});
 			}
 		}
@@ -120,6 +122,57 @@ internal static class WinSqliteReader
 			{
 				sqlite3_close_v2(db);
 			}
+		}
+	}
+
+	public static List<DbThread> ReadDesktopCatalogThreads(string databasePath)
+	{
+		List<DbThread> list = new List<DbThread>();
+		IntPtr db = IntPtr.Zero;
+		IntPtr statement = IntPtr.Zero;
+		try
+		{
+			if (sqlite3_open_v2(Utf8(databasePath), out db, SQLITE_OPEN_READONLY, IntPtr.Zero) != SQLITE_OK || !TableExists(db, "local_thread_catalog"))
+			{
+				return list;
+			}
+			HashSet<string> columns = ReadColumns(db, "local_thread_catalog");
+			if (!columns.Contains("thread_id"))
+			{
+				return list;
+			}
+			string sql = "select " + string.Join(",", new[]
+			{
+				TextColumn(columns, "t", "thread_id"),
+				TextColumn(columns, "t", "cwd"),
+				TextColumn(columns, "t", "display_title", "title"),
+				TextColumn(columns, "t", "source_kind", "source"),
+				TextColumn(columns, "t", "thread_source"),
+				UpdatedAtMilliseconds(columns, "t")
+			}) + " from [local_thread_catalog] t" + (columns.Contains("host_id") ? " where t.[host_id]='local'" : string.Empty);
+			if (sqlite3_prepare_v2(db, Utf8(sql), -1, out statement, IntPtr.Zero) != SQLITE_OK)
+			{
+				return list;
+			}
+			while (sqlite3_step(statement) == SQLITE_ROW)
+			{
+				list.Add(new DbThread
+				{
+					Id = ColumnText(statement, 0),
+					Cwd = TextHelpers.StripExtendedPrefix(ColumnText(statement, 1)),
+					RawCwd = ColumnText(statement, 1),
+					Title = ColumnText(statement, 2),
+					Source = ColumnText(statement, 3),
+					ThreadSource = ColumnText(statement, 4),
+					UpdatedAtMilliseconds = sqlite3_column_int64(statement, 5)
+				});
+			}
+			return list;
+		}
+		finally
+		{
+			if (statement != IntPtr.Zero) sqlite3_finalize(statement);
+			if (db != IntPtr.Zero) sqlite3_close_v2(db);
 		}
 	}
 

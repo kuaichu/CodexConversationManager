@@ -166,6 +166,10 @@ internal static class CodexCatalog
 				{
 					session.IsSubagent = true;
 				}
+				if (string.IsNullOrWhiteSpace(session.Model))
+				{
+					session.Model = thread.Model;
+				}
 				if (!string.IsNullOrWhiteSpace(thread.ParentThreadId))
 				{
 					session.ParentThreadId = thread.ParentThreadId;
@@ -190,6 +194,28 @@ internal static class CodexCatalog
 			text = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 		}
 		return Path.Combine(text, ".codex");
+	}
+
+	private static string ReadRolloutModel(string path, JavaScriptSerializer serializer)
+	{
+		try
+		{
+			using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+			using StreamReader reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, 4096);
+			for (int i = 0; i < 80; i++)
+			{
+				string line = reader.ReadLine();
+				if (line == null) break;
+				if (!(serializer.DeserializeObject(line) is Dictionary<string, object> record) ||
+					!(record.TryGetValue("payload", out object value) && value is Dictionary<string, object> payload)) continue;
+				string model = GetString(payload, "model");
+				if (!string.IsNullOrWhiteSpace(model)) return model;
+			}
+		}
+		catch
+		{
+		}
+		return string.Empty;
 	}
 
 	private static int ApplyRolloutMetadata(IEnumerable<SessionInfo> sessions, string codexHome)
@@ -247,6 +273,11 @@ internal static class CodexCatalog
 				session.OriginThreadId = ConversationLineage.ResolveOriginThreadId(dictionary2, session.ThreadId);
 				session.CliVersion = GetString(dictionary2, "cli_version");
 				session.ModelProvider = GetString(dictionary2, "model_provider");
+				session.Model = GetString(dictionary2, "model");
+				if (string.IsNullOrWhiteSpace(session.Model))
+				{
+					session.Model = ReadRolloutModel(text, javaScriptSerializer);
+				}
 				string text4 = GetString(dictionary2, "cwd");
 				if (!string.IsNullOrWhiteSpace(text4))
 				{

@@ -1,8 +1,10 @@
-# Codex Conversation Manager
+# Codex Conversation Manager DSH
 
-**Manage, back up, and migrate local Codex conversations and projects on Windows.**
+**Manage, preview, back up, migrate, and batch-clean local Codex conversations and projects on Windows.**
 
 [简体中文](README.zh-CN.md) · Current release: v1.0.3
+
+This is a community-enhanced build based on [HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager) v1.0.3. Thanks to the original author [HikiTanis](https://github.com/HikiTanis) for publishing the foundation. The refreshed UI, batch cleanup, conversation preview, archived-session scan, ghost-task repair, and model display in this repository build on that work and remain under the upstream MIT License.
 
 The application keeps Codex projects, main conversations, and subagent conversations organized in one place. It reconnects conversations after a project is renamed or moved, explains local storage use, migrates work between computers, and helps avoid or repair stale sidebar entries during cleanup.
 
@@ -20,7 +22,7 @@ The application keeps Codex projects, main conversations, and subagent conversat
 
 | Area | What it does |
 | --- | --- |
-| Conversation and project management | Shows each project folder, file count, and total size; separates main and subagent conversations; fully displays long conversations and opens at the latest message; the user-message rail supports hover previews, click/drag navigation, and a viewer that follows the main window size |
+| Conversation and project management | Shows each project folder, file count, total size, and conversation model; separates main and subagent conversations; fully displays long conversations and opens at the latest message; the user-message rail supports hover previews, click/drag navigation, and a viewer that follows the main window size |
 | Backup and migration | Creates `.codexchat` from selected main conversations across projects, or `.codexproject` from one or more projects with linked main and subagent conversations |
 | Project reassociation | Maps a conversation's recorded project path to a new folder and updates the local task index and desktop-project association |
 | Two import identities | **Smart merge** continues the same lineage; **Independent copy** creates fresh Thread IDs and session files, so deleting one copy cannot delete the other |
@@ -119,4 +121,8 @@ The script restores pinned dependencies, builds the application, runs Chinese an
 
 The source repository also contains `docs/releases/v1.0.3.md` (release notes), `CHANGELOG.md` (version history), `docs/RELEASING.md` (maintainer workflow), `.github/SUPPORT.md` (issue reporting), and `.github/CONTRIBUTING.md` (contributor guide).
 
-Licensed under the [MIT License](LICENSE).
+## Upstream and license
+
+- Upstream project: [HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager)
+- Original author: [HikiTanis](https://github.com/HikiTanis)
+- This community build is licensed under the same [MIT License](LICENSE).

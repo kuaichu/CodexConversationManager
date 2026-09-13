@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace CodexConversationManager;
 
@@ -20,6 +21,20 @@ internal sealed class DeleteOptions
 	public ConversationDeleteMode ConversationMode { get; set; }
 
 	public ProjectDeleteMode ProjectMode { get; set; }
+}
+
+internal sealed class BatchProjectCleanupItem
+{
+	public ProjectGroup Project { get; set; }
+
+	public ProjectDeleteMode ProjectMode { get; set; }
+}
+
+internal sealed class BatchProjectCleanupOptions
+{
+	public ConversationDeleteMode ConversationMode { get; set; }
+
+	public List<BatchProjectCleanupItem> Projects { get; set; } = new List<BatchProjectCleanupItem>();
 }
 
 internal enum TrashAction

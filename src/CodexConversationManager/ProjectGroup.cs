@@ -42,6 +42,8 @@ internal sealed class ProjectGroup : NotifyObject
 
 	public bool CanBackupFiles => !IsSubagentOnly && !string.IsNullOrWhiteSpace(ProjectPath) && System.IO.Directory.Exists(ProjectPath);
 
+	public bool CanCleanup => MainCount > 0 && Sessions != null && Sessions.Any((SessionInfo session) => session != null && session.CanDelete);
+
 	public bool StorageScanStarted => storageScanStarted;
 
 	public string ProjectStorageSummary => IsSubagentOnly ? UiLanguage.T("孤立子代理：不统计项目文件") : projectStorageSummary;
@@ -107,6 +109,14 @@ internal sealed class ProjectGroup : NotifyObject
 			return 0;
 		}
 	}
+
+	public int ArchivedMainCount => Sessions?.Count((SessionInfo session) => session != null && !session.IsSubagent && session.Archived) ?? 0;
+
+	public int ArchivedInternalCount => Sessions?.Count((SessionInfo session) => session != null && session.IsSubagent && session.Archived) ?? 0;
+
+	public bool HasArchivedSessions => ArchivedMainCount > 0 || ArchivedInternalCount > 0;
+
+	public string ArchivedSummary => !HasArchivedSessions ? string.Empty : (UiLanguage.IsEnglish ? "Archived: " + ArchivedMainCount + " main · " + ArchivedInternalCount + " subagents" : "已归档：" + ArchivedMainCount + " 个主对话 · " + ArchivedInternalCount + " 个子代理");
 
 	public DateTime LastUpdated
 	{
