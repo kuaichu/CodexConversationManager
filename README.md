@@ -1,48 +1,49 @@
 # Codex Conversation Manager
 
-**Manage, preview, back up, migrate, and batch-clean local Codex conversations and projects on Windows.**
+**Windows 上的 Codex 对话与项目管理、备份和迁移工具。**
 
-[简体中文](README.zh-CN.md) · Current release: v1.0.3
+当前版本：v1.0.3
 
-This is a community-enhanced build based on [HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager) v1.0.3. Thanks to the original author [HikiTanis](https://github.com/HikiTanis) for publishing the foundation. The refreshed UI, batch cleanup, conversation preview, archived-session scan, ghost-task repair, and model display in this repository build on that work and remain under the upstream MIT License.
+本项目是 [HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager) v1.0.3 的社区增强版。感谢原作者 [HikiTanis](https://github.com/HikiTanis) 开源基础项目；本仓库的界面、批量清理、对话预览、归档扫描、Ghost 任务修复和模型显示均是在其工作之上扩展，仍遵循原项目的 MIT License。
 
-The application keeps Codex projects, main conversations, and subagent conversations organized in one place. It reconnects conversations after a project is renamed or moved, explains local storage use, migrates work between computers, and helps avoid or repair stale sidebar entries during cleanup.
+它在本机统一整理 Codex 项目、主对话和子代理对话，解决项目改名或移动后对话失联、会话占用不透明、跨电脑迁移困难，以及删除后侧边栏残留等问题。
 
-> This is an unofficial community project. It is not affiliated with or endorsed by OpenAI. Codex local-storage formats may change; keep an independent backup of important data.
+> 本项目是非官方社区工具，与 OpenAI 无关联，也未获得 OpenAI 背书。Codex 本地数据格式可能变化；处理重要数据前请保留独立备份。
 
-## Problems it solves
+## 它解决什么问题
 
-- **A project moved and its conversations disappeared:** reassociate existing conversations with a renamed, relocated, or copied project folder.
-- **Local storage is hard to understand:** separate main and subagent conversations by project, with project totals and each conversation's time, size, Thread ID, and actual path.
-- **Subagents have accumulated:** search, select, select all, and batch-delete main or subagent conversations; after selecting every main conversation in a project, the same operation can also process its folder.
-- **Projects and conversations are difficult to move together:** transfer selected conversations alone, or package one or more projects with all linked conversations.
-- **Round trips create duplicates or shared files:** merge by original identity, or create fresh Thread IDs and fully independent session files.
+- **项目换了路径，对话不见了：** 将已有对话重新关联到改名、移动或复制后的项目目录。
+- **不知道空间被谁占用：** 按项目分开显示主对话和子代理，查看项目总大小，以及每条对话的时间、大小、Thread ID 和实际路径。
+- **子代理太多：** 搜索、多选、全选并批量删除主对话或子代理；选中项目全部主对话后，还可在同一次操作中处理项目目录。
+- **项目和对话难以一起迁移：** 可只迁移多个对话，也可将一个或多个项目及其全部关联对话打包到另一台电脑。
+- **往返迁移容易重复或共用文件：** 可按原始编号智能合并，也可生成全新 Thread ID 和独立文件。
 
-## Core capabilities
+## 核心能力
 
-| Area | What it does |
+| 功能 | 能做什么 |
 | --- | --- |
-| Conversation and project management | Shows each project folder, file count, total size, and conversation model; separates main and subagent conversations; fully displays long conversations and opens at the latest message; the user-message rail supports hover previews, click/drag navigation, and a viewer that follows the main window size |
-| Backup and migration | Creates `.codexchat` from selected main conversations across projects, or `.codexproject` from one or more projects with linked main and subagent conversations |
-| Project reassociation | Maps a conversation's recorded project path to a new folder and updates the local task index and desktop-project association |
-| Two import identities | **Smart merge** continues the same lineage; **Independent copy** creates fresh Thread IDs and session files, so deleting one copy cannot delete the other |
-| Cleanup and recovery | Batch-moves records to app trash, restores them, or permanently deletes them; selecting every main conversation in a project enables optional project-folder handling and evidence-backed stale-sidebar repair |
-| Chinese and English UI | Switches between Simplified Chinese and English inside the application |
+| 对话与项目管理 | 按项目汇总目录、文件数量和总大小；显示每条对话使用的模型；主对话与子代理分栏显示；完整只读查看长对话，默认定位最新消息；左侧用户消息导航轨支持悬停预览、点击或拖动跳转，预览框会随主窗口缩放 |
+| 备份与迁移 | 跨项目选择多个主对话创建 `.codexchat`，或把一个或多个项目及其主对话、子代理创建为 `.codexproject` |
+| 路径重新关联 | 导入时把对话中的原项目路径映射到新目录，并更新本地任务索引和桌面项目归属 |
+| 两种导入身份 | “智能合并”延续同源对话；“独立复制”生成全新 Thread ID 和会话文件，删除其中一份不会影响另一份 |
+| 清理与恢复 | 跨项目勾选对话或项目并一次批量处理；项目目录可分别保留、移入 Windows 回收站或永久删除；可修复旧侧边栏残留和 DesktopOnly Ghost 任务 |
+| 归档与预览 | 可筛选 Codex 归档会话；删除前查看标题、Thread ID、工作目录、文件路径和真实消息正文 |
+| 界面 | Fluent 风格界面，支持浅色/深色主题以及简体中文/英文切换 |
 
-Inspection, backup, dry-run validation, and import are built into the application. They require neither a separate transfer utility nor Codex CLI. **Only conversation deletion (app trash or permanent deletion) and stale-sidebar repair require Codex CLI 0.148.0 or later; the latest version is recommended.** Sending or deleting a project folder through Windows does not itself require the CLI.
+查看、备份、预检和导入均由软件内置引擎完成，不需要额外的迁移程序，也不需要 Codex CLI。**只有删除会话（移入软件回收站或永久删除）和修复旧侧边栏残留需要 Codex CLI 0.148.0 或更高版本；建议使用最新版。**单独处理项目目录的 Windows 回收站或永久删除不依赖 CLI。
 
-## Download and run
+## 下载与运行
 
-End-user requirements:
+普通用户需要：
 
-- 64-bit Windows 10 or Windows 11;
-- [.NET Framework 4.8 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet-framework/net48);
-- for deletion or sidebar repair only, a compatible locally available [Codex CLI](https://developers.openai.com/codex/cli) 0.148.0 or later. Run `codex --version` to confirm it; the application can also discover compatible runtimes bundled with Codex Desktop or the VS Code extension. Version 0.148.0 is this project's compatibility baseline, not an official OpenAI minimum.
+- 64 位 Windows 10 或 Windows 11；
+- [.NET Framework 4.8 运行库](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/net48)；
+- 若使用删除或侧边栏修复功能，本机需有可用的 [Codex CLI](https://developers.openai.com/codex/cli) 0.148.0 或更高版本；可用 `codex --version` 确认，软件也会查找 Codex Desktop 或 VS Code 扩展附带的兼容运行文件。0.148.0 是本项目的兼容基线，不代表 OpenAI 官方最低版本。
 
-The application is portable and does not need an installer:
+本软件是便携版，无需安装：
 
-1. Download `CodexConversationManager-Windows-v1.0.3.zip` and `SHA256SUMS.txt` from GitHub Releases.
-2. Compare the release checksum:
+1. 从 GitHub Releases 下载 `CodexConversationManager-Windows-v1.0.3.zip` 和 `SHA256SUMS.txt`。
+2. 校验下载文件：
 
    ```powershell
    $zip = '.\CodexConversationManager-Windows-v1.0.3.zip'
@@ -50,79 +51,79 @@ The application is portable and does not need an installer:
    Get-Content .\SHA256SUMS.txt
    ```
 
-   The two SHA-256 values must match.
-3. Extract the complete ZIP into a new folder. Do not run it from inside the archive or mix files from different versions.
-4. Double-click `Start.cmd`, or run `CodexConversationManager.exe`.
+   两处 SHA-256 应一致。
+3. 将 ZIP 完整解压到一个新文件夹，不要在压缩包内运行，也不要把新旧版本文件混放。
+4. 双击 `Start.cmd`，或运行 `CodexConversationManager.Model.exe`。
 
-The executable is not currently Authenticode-signed, so Windows may show an unknown-publisher warning. Download only from a release source you trust and verify the SHA-256 first.
+程序当前没有 Authenticode 数字签名，Windows 可能提示“未知发布者”。请只从可信 Release 页面下载并先核对 SHA-256。
 
-## Three common workflows
+## 三个典型工作流
 
-### 1. Rename or move a project on the same computer
+### 1. 同一台电脑移动或重命名项目
 
-1. Create a `.codexchat` for the conversations associated with the original project. If the folder has already moved, you can still scan and back up the old conversations while their session files remain; do not delete them first.
-2. After renaming or moving the project, import the backup and select the new project folder.
-3. Run the read-only inspection. If it passes, exit Codex completely and import with **Smart merge**.
-4. Reopen Codex and the relocated project, then confirm that its conversations appear under the project.
+1. 为原项目中需要保留的对话创建 `.codexchat`；如果项目已经移动，只要旧会话文件仍在，也可以先扫描并备份，切勿先删除旧会话。
+2. 移动或重命名项目后，导入该备份并选择新的项目目录。
+3. 先执行只读检查；检查通过后完全退出 Codex，再使用“智能合并”正式导入。
+4. 重新打开 Codex 和新项目，确认对话出现在项目下。
 
-### 2. Copy a project yourself and migrate conversations only
+### 2. 自己复制项目，只迁移对话
 
-1. Select main conversations across one or more projects and create a `.codexchat` on the source computer.
-2. Copy the project folders and the backup file separately to the destination computer.
-3. Import the backup and map every source project to its actual destination folder. Use **Smart merge** to continue the same lineage, or **Independent copy** for a separate copy.
+1. 在原电脑选择多个主对话，创建 `.codexchat`。
+2. 将项目目录和备份文件分别复制到目标电脑。
+3. 导入备份，为每个来源项目选择实际目录；继续同一对话用“智能合并”，需要互不影响的副本用“独立复制”。
 
-### 3. Move projects and conversations together
+### 3. 项目与对话一起迁移
 
-1. Select one or more projects and create a `.codexproject`.
-2. On the destination computer, choose where to restore each project, inspect the package, and then import the project files and all linked conversations.
-3. To bring later work back to the first computer, create another backup and use **Smart merge**. Matching is limited to the selected destination project.
+1. 选择一个或多个项目，创建 `.codexproject`。
+2. 在目标电脑选择项目还原位置，先检查，再导入项目文件和全部关联对话。
+3. 如果在目标电脑继续工作后还要迁回原电脑，再创建备份并使用“智能合并”；它只在目标项目内匹配同源对话。
 
-> Exit Codex completely before import, deletion, restoration, or sidebar repair so the running client cannot overwrite local state. Keep the source package until every imported conversation has been opened and verified in the destination Codex client.
+> 正式导入、删除、恢复或侧边栏修复前，请完全退出 Codex，避免运行中的客户端覆盖本地状态。导入后保留源备份，直到在目标 Codex 中实际打开并确认对话可用。
 
-## Backup formats
+## 备份格式
 
-| Extension | Contents | Use it for |
+| 后缀 | 内容 | 用途 |
 | --- | --- | --- |
-| `.codexchat` | Selected main conversations across projects; no project files or subagents | Renamed or moved projects, manually copied projects, and conversation-only archives or transfers |
-| `.codexproject` | One or more project folders plus all linked main and subagent conversations | Complete project-and-conversation backup or migration |
-| `.codexpack` / `.codexbundle` | Backups from older releases | Legacy import only; new packages are not created in these formats |
+| `.codexchat` | 跨项目选择的主对话，不含项目文件和子代理 | 项目改名/移动、已自行复制项目、仅归档或迁移对话 |
+| `.codexproject` | 一个或多个项目目录，以及全部关联主对话和子代理 | 项目与对话整体备份和迁移 |
+| `.codexpack` / `.codexbundle` | 旧版本备份 | 仅兼容导入，不再创建 |
 
-App trash is not a formal backup. It lives at `<CODEX_HOME>\conversation-migrator-trash` and exists for recovery from accidental deletion. Moving a session there usually does not reclaim space on drive C; permanently purge confirmed-unneeded entries to release that space.
+软件回收站不是正式备份：它位于 `<CODEX_HOME>\conversation-migrator-trash`，用于误删恢复。移入回收站通常不会释放 C 盘空间；确认不再需要后还要永久清除。
 
-See `docs/BACKUP_FORMATS.md` in the source repository for package structure, conflict handling, validation, and resource limits.
+完整的包结构、冲突处理、校验和资源限制见源码仓库中的 `docs/BACKUP_FORMATS.md`。
 
-## Compatibility and limitations
+## 兼容性与限制
 
-- `.jsonl.zst` sessions currently expose index time, size, and path only. Their content cannot be previewed, included in a formal backup, or imported; keep the original compressed file.
-- `.codexproject` preserves ordinary files, empty directories, and modification times. It does not transfer junctions, symbolic links, NTFS permissions, or alternate data streams.
-- Project restore can require an empty destination, keep existing same-name files, or create a recovery ZIP before overwriting. Review the destination and available disk space first.
-- Import validates paths, Thread IDs, checksums, archive structure, and resource boundaries, and uses transaction snapshots for rollback. It cannot guarantee compatibility with an unknown future Codex storage format.
-- For `paginated` history, import stops when complete-history, turn-pagination, or resume conditions cannot be validated safely. Still open every imported conversation in the destination Codex client to verify it.
+- `.jsonl.zst` 压缩会话目前只显示索引中的时间、大小和路径；不支持内容预览、创建正式备份或导入，请保留原文件。
+- `.codexproject` 保存普通文件、空目录和修改时间；不迁移目录联接、符号链接、NTFS 权限或备用数据流。
+- 还原项目文件时可要求空目录、保留同名文件，或在创建恢复 ZIP 后覆盖；请先确认目标路径和磁盘空间。
+- 导入会校验路径、Thread ID、哈希、包结构和容量边界，并使用事务快照回滚，但不能保证兼容未来未知的 Codex 数据格式。
+- 对 `paginated` 历史，如果工具无法安全验证完整历史、分页或续接条件，就会停止导入；所有导入记录仍应在目标 Codex 客户端中实际打开验证。
 
-## Privacy and safety
+## 隐私与安全
 
-- The application runs locally and has no telemetry, cloud sync, account system, or automatic updater.
-- Formal packages, recovery ZIPs, and app-trash entries are not encrypted. They may contain prompts, responses, source code, command output, local paths, and secrets; handle them as sensitive files.
-- Permanent deletion cannot be undone by this application. Verify the full path before deleting a project folder.
-- Formal packages remain user-managed files. Deleting a source conversation does not delete an existing `.codexchat` or `.codexproject`.
-- Never upload a real backup, session JSONL, Codex database, or unredacted screenshot to a public issue.
+- 软件本地运行，没有遥测、云同步、账号系统或自动更新。
+- 正式备份、恢复 ZIP 和软件回收站均未加密，可能包含提示词、回复、源码、命令输出、本机路径和密钥，请按敏感文件保管。
+- 永久删除无法由本工具恢复；删除项目目录前务必核对显示的完整路径。
+- 正式备份由用户自行管理，删除源对话不会自动删除已经创建的 `.codexchat` 或 `.codexproject`。
+- 不要把真实备份、会话 JSONL、Codex 数据库或未脱敏截图上传到公开 Issue。
 
-For the complete privacy and security boundaries, see `docs/PRIVACY.md` and `.github/SECURITY.md` in the source repository.
+更完整的隐私与安全边界见源码仓库中的 `docs/PRIVACY.md` 和 `.github/SECURITY.md`。
 
-## Development and documentation
+## 开发与更多文档
 
-Source builds require Windows 10/11, .NET SDK 8.x, and PowerShell 5.1 or later. A separate .NET Framework 4.8 Targeting Pack is not required. From the repository root, run:
+从源码构建需要 Windows 10/11、.NET SDK 8.x 和 PowerShell 5.1 或更高版本；无需单独安装 .NET Framework 4.8 Targeting Pack。仓库根目录执行：
 
 ```powershell
 .\scripts\package.ps1
 ```
 
-The script restores pinned dependencies, builds the application, runs Chinese and English functional and UI tests, validates the release candidate, and writes the ZIP plus `SHA256SUMS.txt` to `release/`. `VERSION` is the single source of truth for the release version.
+脚本会还原固定依赖、编译、运行中英文功能与界面测试、验证候选包，并把 ZIP 和 `SHA256SUMS.txt` 写入 `release/`。`VERSION` 是发布版本的唯一来源。
 
-The source repository also contains `docs/releases/v1.0.3.md` (release notes), `CHANGELOG.md` (version history), `docs/RELEASING.md` (maintainer workflow), `.github/SUPPORT.md` (issue reporting), and `.github/CONTRIBUTING.md` (contributor guide).
+源码仓库还提供：`docs/releases/v1.0.3.md`（发布说明）、`CHANGELOG.md`（版本记录）、`docs/RELEASING.md`（发布流程）、`.github/SUPPORT.md`（问题反馈）和 `.github/CONTRIBUTING.md`（贡献指南）。
 
-## Upstream and license
+## 上游与许可证
 
-- Upstream project: [HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager)
-- Original author: [HikiTanis](https://github.com/HikiTanis)
-- This community build is licensed under the same [MIT License](LICENSE).
+- 原项目：[HikiTanis/codex-conversation-manager](https://github.com/HikiTanis/codex-conversation-manager)
+- 原作者：[HikiTanis](https://github.com/HikiTanis)
+- 本社区增强版使用与上游相同的 [MIT License](LICENSE)。

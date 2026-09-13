@@ -86,7 +86,6 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\Start.cmd') -Destination (Join-Path $stage 'Start.cmd')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'VERSION') -Destination (Join-Path $stage 'VERSION')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'README.md') -Destination (Join-Path $stage 'README.md')
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'README.zh-CN.md') -Destination (Join-Path $stage 'README.zh-CN.md')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination (Join-Path $stage 'LICENSE')
 
     New-Item -ItemType Directory -Path $candidateRoot -Force | Out-Null

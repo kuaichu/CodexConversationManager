@@ -8,6 +8,17 @@ No unreleased changes are documented yet.
 
 ## [1.0.3] - 2026-09-01
 
+### 社区增强功能
+
+- 新增跨项目批量清理，可分别保留项目目录、移入 Windows 回收站或永久删除，并支持统一设置全部项目。
+- 新增跨项目对话多选和批量删除，自动包含关联子代理并沿用原有路径安全校验。
+- 新增删除前对话预览，显示消息正文、角色、时间、Thread ID、工作目录和会话文件路径。
+- 新增归档项目筛选、归档主对话和子代理数量，以及归档状态标记。
+- 新增 DesktopOnly Ghost 任务检测与修复，仅在核心索引和可读 rollout 都不存在时允许清理。
+- 新增对话模型读取和显示，支持 Codex 线程索引与 rollout 事件元数据。
+- 新增 Fluent 风格界面及可持久化的浅色、深色主题。
+- 新增归档扫描、Ghost 安全判定、对话预览、模型元数据和主题渲染回归测试。
+
 ### Fixed
 
 - Simplified conversation preview to one automatic layout: it opens nearly full-size and follows the main window with the same 16-pixel outer inset at every size.

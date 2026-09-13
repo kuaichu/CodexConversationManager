@@ -48,17 +48,15 @@ $protocolVersionExpression = 'typeof(CodexAppServerThreadDeletion).Assembly.GetN
 Assert-FileContains (Join-Path $repoRoot 'src\CodexConversationManager\CodexConversationManager.xaml') $windowVersionText 'Window version label'
 Assert-FileContains (Join-Path $repoRoot 'src\CodexConversationManager\DeletionDialogs.cs') '/CodexConversationManager;component/DialogTheme.xaml' 'Dialog theme resource path'
 Assert-FileContains (Join-Path $repoRoot 'src\CodexConversationManager\CodexAppServerThreadDeletion.cs') $protocolVersionExpression 'Codex app-server client version source'
-Assert-FileContains (Join-Path $repoRoot 'README.md') "CodexConversationManager-Windows-v$Version.zip" 'English download instructions'
-Assert-FileContains (Join-Path $repoRoot 'README.zh-CN.md') "CodexConversationManager-Windows-v$Version.zip" 'Chinese download instructions'
-Assert-FileContains (Join-Path $repoRoot 'README.md') 'Codex CLI 0.148.0 or later' 'English Codex CLI compatibility requirement'
-Assert-FileContains (Join-Path $repoRoot 'README.zh-CN.md') 'Codex CLI 0.148.0 或更高版本' 'Chinese Codex CLI compatibility requirement'
+Assert-FileContains (Join-Path $repoRoot 'README.md') "CodexConversationManager-Windows-v$Version.zip" 'Chinese download instructions'
+Assert-FileContains (Join-Path $repoRoot 'README.md') 'Codex CLI 0.148.0 或更高版本' 'Chinese Codex CLI compatibility requirement'
 Assert-FileContains (Join-Path $repoRoot 'CHANGELOG.md') "## [$Version]" 'Changelog release section'
 
 $releaseNotes = Join-Path $repoRoot "docs\releases\v$Version.md"
 if (-not (Test-Path -LiteralPath $releaseNotes)) {
     throw "Release notes are missing for VERSION $($Version): $releaseNotes"
 }
-Assert-FileContains $releaseNotes 'Codex CLI 0.148.0 or later' 'Release-note Codex CLI compatibility requirement'
+Assert-FileContains $releaseNotes 'Codex CLI 0.148.0 或更高版本' 'Release-note Codex CLI compatibility requirement'
 Assert-FileContains (Join-Path $repoRoot '.github\workflows\release.yml') 'gh release list' 'Non-failing GitHub release existence check'
 
 $projectFile = Join-Path $repoRoot 'src\CodexConversationManager\CodexConversationManager.csproj'
@@ -112,7 +110,6 @@ if (-not [string]::IsNullOrWhiteSpace($PackagePath)) {
             'Start.cmd',
             'VERSION',
             'README.md',
-            'README.zh-CN.md',
             'LICENSE'
         )
         foreach ($relativePath in $requiredFiles) {

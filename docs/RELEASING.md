@@ -64,7 +64,6 @@ After extraction, the ZIP itself must contain exactly:
 - `Start.cmd`
 - `VERSION`
 - `README.md`
-- `README.zh-CN.md`
 - `LICENSE`
 
 Verify the checksum independently:
