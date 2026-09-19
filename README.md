@@ -52,6 +52,24 @@
 | 归档与预览 | 可筛选 Codex 归档会话；删除前查看标题、Thread ID、工作目录、文件路径和真实消息正文 |
 | 界面 | Fluent 风格界面，支持浅色/深色主题以及简体中文/英文切换 |
 
+## 将 Codex 历史数据迁移到自定义目录
+
+项目提供 `scripts\Relocate-CodexHistory.ps1`，用于只迁移 Codex 历史会话目录。它处理 `sessions` 和 `archived_sessions`，复制后核对文件数量与总字节数，再在 C 盘原路径创建指向自定义目录的符号链接；SQLite 索引、配置、认证、日志和软件回收站保持原位。原会话目录会先改名保留为回滚副本，不会立即删除。
+
+先完全退出 Codex Desktop、Codex CLI、VS Code 中的 Codex 和本管理器，再在项目根目录执行预览：
+
+```powershell
+.\scripts\Relocate-CodexHistory.ps1 -DestinationRoot 'S:\Projects\Active\Codex Conversation Manager\CodexHistory'
+```
+
+确认源目录、目标目录和数据量都正确后，再执行实际迁移：
+
+```powershell
+.\scripts\Relocate-CodexHistory.ps1 -DestinationRoot 'S:\Projects\Active\Codex Conversation Manager\CodexHistory' -Apply
+```
+
+迁移完成后重新启动 Codex 和本工具，确认历史记录和归档都正常，再删除脚本提示的 C 盘回滚副本。目标目录如果位于网络盘，首次扫描和预览可能比本地磁盘慢；网络盘不可用时不要启动 Codex。目录符号链接需要 Windows 权限或开发者模式，脚本会在创建失败时自动恢复已处理的目录。
+
 查看、备份、预检和导入均由软件内置引擎完成，不需要额外的迁移程序，也不需要 Codex CLI。**只有删除会话（移入软件回收站或永久删除）和修复旧侧边栏残留需要 Codex CLI 0.148.0 或更高版本；建议使用最新版。**单独处理项目目录的 Windows 回收站或永久删除不依赖 CLI。
 
 ## 下载与运行
